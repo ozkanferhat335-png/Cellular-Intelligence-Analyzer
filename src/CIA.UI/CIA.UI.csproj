@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>7.3</LangVersion>
+    <AssemblyName>CIA.UI</AssemblyName>
+    <RootNamespace>CIA.UI</RootNamespace>
+    <Nullable>disable</Nullable>
+    <OutputType>WinExe</OutputType>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationIcon>Resources\app.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="NLog" Version="5.2.8" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.1" />
+    <PackageReference Include="GMap.NET.WinForms" Version="2.1.7" />
+    <PackageReference Include="GMap.NET.Core" Version="2.1.7" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\CIA.Core\CIA.Core.csproj" />
+    <ProjectReference Include="..\CIA.Data\CIA.Data.csproj" />
+    <ProjectReference Include="..\CIA.Business\CIA.Business.csproj" />
+    <ProjectReference Include="..\CIA.Services\CIA.Services.csproj" />
+  </ItemGroup>
+</Project>
