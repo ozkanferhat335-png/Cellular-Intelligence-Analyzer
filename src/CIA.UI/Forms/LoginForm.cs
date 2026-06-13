@@ -25,7 +25,6 @@ namespace CIA.UI.Forms
         private TextBox _txtPassword;
         private Button _btnLogin;
         private Label _lblError;
-        private PictureBox _picLogo;
         private CheckBox _chkRemember;
         private ProgressBar _progressBar;
 
@@ -42,6 +41,7 @@ namespace CIA.UI.Forms
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
             this.BackColor = Color.FromArgb(15, 20, 40);
+            this.MinimumSize = new Size(900, 600);
 
             // Left panel - branding
             _panelLeft = new Panel
@@ -92,7 +92,7 @@ namespace CIA.UI.Forms
                 "✓  Daraltılmış Baz Tespiti",
                 "✓  RF Optimizasyon",
                 "✓  Yapay Zeka Destekli Analiz",
-                "✓  Kurumsal Raporlama"
+                "✓  Excel/CSV İçe & Dışa Aktarım"
             };
 
             int featureY = 370;
@@ -240,6 +240,10 @@ namespace CIA.UI.Forms
             // Enter key support
             this.AcceptButton = _btnLogin;
             _txtUsername.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) _txtPassword.Focus(); };
+
+            // Ensure form is visible
+            this.Visible = true;
+            this.BringToFront();
         }
 
         private async void BtnLogin_Click(object sender, EventArgs e)
@@ -250,6 +254,12 @@ namespace CIA.UI.Forms
 
             try
             {
+                if (Program.ServiceProvider == null)
+                {
+                    _lblError.Text = "Servis sağlayıcı başlatılamadı. Uygulamayı yeniden başlatın.";
+                    return;
+                }
+
                 var authService = Program.ServiceProvider.GetRequiredService<IAuthService>();
                 var result = await authService.LoginAsync(new LoginDto
                 {
@@ -292,6 +302,12 @@ namespace CIA.UI.Forms
             {
                 e.Graphics.DrawLine(pen, 420, 0, 420, this.Height);
             }
+        }
+
+        protected override void SetVisibleCore(bool value)
+        {
+            // Always allow the form to become visible
+            base.SetVisibleCore(value);
         }
     }
 }

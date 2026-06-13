@@ -53,6 +53,7 @@ namespace CIA.Services.DependencyInjection
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IHtsImportService, HtsImportService>();
             services.AddScoped<IDriveTestImportService, DriveTestImportService>();
+            services.AddScoped<IExportService, ExportService>();
             services.AddScoped<IReportService, ReportService>();
 
             Logger.Info("Servisler başarıyla kaydedildi.");
