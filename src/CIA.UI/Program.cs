@@ -20,7 +20,7 @@ namespace CIA.UI
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            // Configure NLog
+            // Configure NLog first so we can log startup errors
             ConfigureLogging();
 
             // Handle unhandled exceptions
@@ -34,13 +34,27 @@ namespace CIA.UI
                 // Build DI container
                 ServiceProvider = ServiceRegistration.BuildServiceProvider();
 
-                // Initialize database
-                ServiceRegistration.InitializeDatabase(ServiceProvider);
+                // Initialize database - non-fatal, show login anyway
+                try
+                {
+                    ServiceRegistration.InitializeDatabase(ServiceProvider);
+                    Logger.Info("Veritabanı başarıyla başlatıldı.");
+                }
+                catch (Exception dbEx)
+                {
+                    Logger.Error(dbEx, "Veritabanı başlatma hatası - uygulama devam ediyor.");
+                    MessageBox.Show(
+                        $"Veritabanı başlatılırken hata oluştu:\n\n{dbEx.Message}\n\nUygulama yine de açılacak, ancak bazı özellikler çalışmayabilir.",
+                        "Veritabanı Uyarısı",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                }
 
                 Logger.Info("Uygulama başarıyla başlatıldı.");
 
-                // Show login form
-                Application.Run(new LoginForm());
+                // Always show login form
+                var loginForm = new LoginForm();
+                Application.Run(loginForm);
             }
             catch (Exception ex)
             {

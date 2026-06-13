@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -31,6 +33,9 @@ namespace CIA.UI.Controls
         private ProgressBar _progressImport;
         private Label _lblImportStatus;
         private Panel _panelStats;
+        private Button _btnExportDtCsv;
+        private Button _btnExportDtExcel;
+        private int _selectedDriveTestId = -1;
 
         public DriveTestControl(UserDto currentUser)
         {
@@ -114,7 +119,35 @@ namespace CIA.UI.Controls
             _btnAnalyze.FlatAppearance.BorderSize = 0;
             _btnAnalyze.Click += BtnAnalyze_Click;
 
-            panelButtons.Controls.Add(_btnAnalyze);
+            _btnExportDtCsv = new Button
+            {
+                Text = "📄  CSV Dışa Aktar",
+                Font = new Font("Segoe UI", 9),
+                Size = new Size(160, 35),
+                Location = new Point(220, 5),
+                BackColor = Color.FromArgb(40, 100, 60),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
+            };
+            _btnExportDtCsv.FlatAppearance.BorderSize = 0;
+            _btnExportDtCsv.Click += BtnExportDtCsv_Click;
+
+            _btnExportDtExcel = new Button
+            {
+                Text = "📊  Excel Dışa Aktar",
+                Font = new Font("Segoe UI", 9),
+                Size = new Size(160, 35),
+                Location = new Point(390, 5),
+                BackColor = Color.FromArgb(30, 100, 50),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
+            };
+            _btnExportDtExcel.FlatAppearance.BorderSize = 0;
+            _btnExportDtExcel.Click += BtnExportDtExcel_Click;
+
+            panelButtons.Controls.AddRange(new Control[] { _btnAnalyze, _btnExportDtCsv, _btnExportDtExcel });
             _tabList.Controls.AddRange(new Control[] { _gridDriveTests, panelButtons });
         }
 
@@ -180,13 +213,17 @@ namespace CIA.UI.Controls
             btnBrowse.FlatAppearance.BorderSize = 0;
             btnBrowse.Click += (s, e) =>
             {
-                using (var dlg = new OpenFileDialog { Filter = "CSV Dosyaları (*.csv)|*.csv|Tüm Dosyalar (*.*)|*.*" })
+                using (var dlg = new OpenFileDialog
+                {
+                    Title = "Drive Test Dosyası Seç",
+                    Filter = "CSV Dosyaları (*.csv)|*.csv|Excel Dosyaları (*.xlsx;*.xls)|*.xlsx;*.xls|Metin Dosyaları (*.txt)|*.txt|Tüm Dosyalar (*.*)|*.*"
+                })
                 {
                     if (dlg.ShowDialog() == DialogResult.OK)
                     {
                         _txtDtFile.Text = dlg.FileName;
                         if (string.IsNullOrEmpty(_txtTestName.Text))
-                            _txtTestName.Text = System.IO.Path.GetFileNameWithoutExtension(dlg.FileName);
+                            _txtTestName.Text = Path.GetFileNameWithoutExtension(dlg.FileName);
                     }
                 }
             };
@@ -258,6 +295,7 @@ namespace CIA.UI.Controls
             }
 
             int driveTestId = (int)_gridDriveTests.SelectedRows[0].Cells["Id"].Value;
+            _selectedDriveTestId = driveTestId;
             _btnAnalyze.Enabled = false;
             _gridAnalysis.Rows.Clear();
 
@@ -407,6 +445,86 @@ namespace CIA.UI.Controls
             };
 
             return grid;
+        }
+
+        // ─── Export Handlers ────────────────────────────────────────────────────
+
+        private async void BtnExportDtCsv_Click(object sender, EventArgs e)
+        {
+            if (_selectedDriveTestId < 0)
+            {
+                MessageBox.Show("Lütfen önce bir Drive Test seçin.", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            using (var dlg = new SaveFileDialog())
+            {
+                dlg.Title = "Drive Test Kayıtlarını CSV Olarak Kaydet";
+                dlg.Filter = "CSV Dosyaları (*.csv)|*.csv";
+                dlg.FileName = $"DriveTest_{_selectedDriveTestId}_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+
+                if (dlg.ShowDialog() == DialogResult.OK)
+                {
+                    try
+                    {
+                        _btnExportDtCsv.Enabled = false;
+                        var unitOfWork = Program.ServiceProvider.GetRequiredService<IUnitOfWork>();
+                        var records = await unitOfWork.DriveTests.GetRecordsAsync(new CIA.Core.DTOs.DriveTestQueryDto { DriveTestId = _selectedDriveTestId, PageSize = int.MaxValue });
+                        var exportService = Program.ServiceProvider.GetRequiredService<IExportService>();
+                        await exportService.ExportDriveTestRecordsToCsvAsync(records, dlg.FileName);
+                        MessageBox.Show($"✅ Drive Test kayıtları başarıyla dışa aktarıldı:\n{dlg.FileName}",
+                            "Dışa Aktarma Tamamlandı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error(ex, "Drive Test CSV dışa aktarma hatası");
+                        MessageBox.Show($"Dışa aktarma hatası: {ex.Message}", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                    finally
+                    {
+                        _btnExportDtCsv.Enabled = true;
+                    }
+                }
+            }
+        }
+
+        private async void BtnExportDtExcel_Click(object sender, EventArgs e)
+        {
+            if (_selectedDriveTestId < 0)
+            {
+                MessageBox.Show("Lütfen önce bir Drive Test seçin.", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            using (var dlg = new SaveFileDialog())
+            {
+                dlg.Title = "Drive Test Kayıtlarını Excel Olarak Kaydet";
+                dlg.Filter = "Excel Dosyaları (*.xlsx)|*.xlsx";
+                dlg.FileName = $"DriveTest_{_selectedDriveTestId}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+
+                if (dlg.ShowDialog() == DialogResult.OK)
+                {
+                    try
+                    {
+                        _btnExportDtExcel.Enabled = false;
+                        var unitOfWork = Program.ServiceProvider.GetRequiredService<IUnitOfWork>();
+                        var records = await unitOfWork.DriveTests.GetRecordsAsync(new CIA.Core.DTOs.DriveTestQueryDto { DriveTestId = _selectedDriveTestId, PageSize = int.MaxValue });
+                        var exportService = Program.ServiceProvider.GetRequiredService<IExportService>();
+                        await exportService.ExportDriveTestRecordsToExcelAsync(records, dlg.FileName);
+                        MessageBox.Show($"✅ Drive Test kayıtları başarıyla dışa aktarıldı:\n{dlg.FileName}",
+                            "Dışa Aktarma Tamamlandı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error(ex, "Drive Test Excel dışa aktarma hatası");
+                        MessageBox.Show($"Dışa aktarma hatası: {ex.Message}", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                    finally
+                    {
+                        _btnExportDtExcel.Enabled = true;
+                    }
+                }
+            }
         }
     }
 }
